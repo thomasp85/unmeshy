@@ -4,9 +4,9 @@ Version: 0.0.0.9000
 Authors@R: 
     c(person(given = "Thomas Lin",
              family = "Pedersen",
-             role = c("aut", "ctb"),
-             email = "thomasp85@gmail.com"), 
-             comment = c(ORCID = "0000-0002-5147-4711"))
+             role = c("aut", "cre"),
+             email = "thomasp85@gmail.com", 
+             comment = c(ORCID = "0000-0002-5147-4711")))
 Description: Provides utilities for working with objects in 3D and convert these
     to a non-overlaping 2D representation suitable for line-drawing etc.
 License: MIT + file LICENSE
@@ -20,4 +20,5 @@ LinkingTo:
     cpp11
 SystemRequirements: C++11
 Imports: 
-    cpp11
+    cpp11,
+    tibble

@@ -1,15 +1,17 @@
 #include "bsp.h"
 #include <vector>
+#include <iostream>
 #include "geometry.h"
 
-void bsp::build_tree(std::vector<triangle> list) {
+void bsp::build_tree(std::vector<triangle>& list) {
   if (list.size() == 0) return;
   auto iter = list.begin();
-  partition = *iter;
-  triangles.push_back(*iter++);
+  partition = plane(*iter);
+  triangles.push_back(*iter);
+  ++iter;
   std::vector<triangle> front_list, back_list;
-  while (iter != list.end()) {
-    triangle tri = *iter++;
+  for (; iter != list.end(); ++iter) {
+    triangle tri = triangle(*iter);
 
     switch (partition.classify_triangle(tri)) {
     case COINCIDENT:
@@ -23,13 +25,13 @@ void bsp::build_tree(std::vector<triangle> list) {
       break;
     case SPAN: {
       cut_tri split = partition.split_triangle(tri);
-      front_list.push_back(split.front);
-      back_list.push_back(split.back);
-      if (split.last_is_front) {
-        front_list.push_back(split.extra);
-      } else {
-        back_list.push_back(split.extra);
-      }
+      front_list.push_back(triangle(split.front));
+      back_list.push_back(triangle(split.back));
+      //if (split.last_is_front) {
+      //  front_list.push_back(triangle(split.extra));
+      //} else {
+      //  back_list.push_back(triangle(split.extra));
+      //}
       break;
     }
     default:
@@ -37,12 +39,10 @@ void bsp::build_tree(std::vector<triangle> list) {
     }
   }
   if (!front_list.empty()) {
-    front = std::unique_ptr<bsp>(new bsp);
-    front->build_tree(front_list);
+    front = std::unique_ptr<bsp>(new bsp(front_list));
   }
   if (!back_list.empty()) {
-    back = std::unique_ptr<bsp>(new bsp);
-    back->build_tree(back_list);
+    back = std::unique_ptr<bsp>(new bsp(back_list));
   }
 }
 
@@ -148,6 +148,9 @@ void bsp::cut_by_shadows(bsp& shadow_bsp, const point& light, bool view,
       if ((*iter).normal().dot(light - (*iter)[0]) >= 0) {
         shadow_bsp.add_shadow(light, *iter, new_triangles, view, intensity);
       } else {
+        if (view) {
+          iter->set_back_facing(true);
+        }
         new_triangles.push_back(*iter);
       }
       iter++;

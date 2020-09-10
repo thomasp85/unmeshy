@@ -2,6 +2,7 @@
 
 #include <math.h>
 #include <cmath>
+#include <limits>
 #include <vector>
 
 struct vec3 {
@@ -16,6 +17,8 @@ struct vec3 {
     return vec3(x / l, y / l, z / l);
   }
   vec3 operator* (const double& s) { return vec3(x * s, y * s, z * s); }
+  bool operator== (const vec3& vec) const { return x == vec.x && y == vec.y && z == vec.z; }
+  bool operator!= (const vec3& vec) const { return x != vec.x || y != vec.y || z != vec.z; }
   double dot(const vec3& b) const { return x * b.x + y * b.y + z * b.z; }
   vec3 cross(const vec3& b) const { return vec3(y * b.z - z * b.y, z * b.x - x * b.z, x * b.y - y * b.x); }
 };
@@ -33,7 +36,34 @@ struct point : vec3 {
     double zd = z - p2.z;
     return std::sqrt(xd*xd + yd*yd + zd*zd);
   }
+  void project(const point& from, const vec3& plane_n, const point& plane_p) {
+    vec3 proj_dir = *this - from;
+    double ln = proj_dir.dot(plane_n);
+    if (ln == 0) ln = 1e-6;
+    double d = (plane_p - from).dot(plane_n) / ln;
+    if (d < 0) {
+
+    }
+    point projected = from + proj_dir * d;
+    x = projected.x;
+    y = projected.y;
+    z = projected.z;
+  }
 };
+namespace std {
+template <>
+struct hash<vec3> {
+  size_t operator()(const vec3 & x) const {
+    return std::hash<double>()(x.x) ^ std::hash<double>()(x.y) ^ std::hash<double>()(x.z);
+  }
+};
+template <>
+struct hash<point> {
+  size_t operator()(const point & x) const {
+    return std::hash<double>()(x.x) ^ std::hash<double>()(x.y) ^ std::hash<double>()(x.z);
+  }
+};
+}
 
 class triangle {
 private:
@@ -44,6 +74,7 @@ private:
   int _id = 0;
   double _light = 0;
   bool _visible = false;
+  bool _back = false;
 
 public:
 
@@ -93,38 +124,10 @@ public:
   int id() const { return _id; }
   double light() const { return _light; }
   void illuminate(double light = 1) { _light += light; }
-  bool is_visible() { return _visible; }
+  bool is_visible() const { return _visible; }
+  bool is_back_facing() const { return _back; }
   void set_visibility(bool visible = true) { _visible = visible; }
-  void project(const point& from, const vec3& plane_n, const point& plane_p) {
-    vec3 proj_dir;
-    double ln, d;
-    proj_dir = _a - from;
-    ln = proj_dir.dot(plane_n);
-    if (ln == 0) ln = 1e-6;
-    d = (plane_p - from).dot(plane_n) / ln;
-    if (d < 0) {
-      set_visibility(false);
-    }
-    _a = from + proj_dir * d;
-
-    proj_dir = _b - from;
-    ln = proj_dir.dot(plane_n);
-    if (ln == 0) ln = 1e-6;
-    d = (plane_p - from).dot(plane_n) / ln;
-    if (d < 0) {
-      set_visibility(false);
-    }
-    _b = from + proj_dir * d;
-
-    proj_dir = _c - from;
-    ln = proj_dir.dot(plane_n);
-    if (ln == 0) ln = 1e-6;
-    d = (plane_p - from).dot(plane_n) / ln;
-    if (d < 0) {
-      set_visibility(false);
-    }
-    _c = from + proj_dir * d;
-  }
+  void set_back_facing(bool back = true) { _back = back; }
 };
 
 struct cut_tri {
@@ -146,7 +149,12 @@ public:
   plane(const triangle& tri) : n(tri.normal()), d(-tri.a().dot(n)) {}
 
   double classify_point(const point& p) const {
-    return n.x * p.x + n.y * p.y + n.z * p.z + d;
+    double loc = n.x * p.x + n.y * p.y + n.z * p.z + d;
+    if (loc <  std::numeric_limits<double>::epsilon() &&
+        loc > -std::numeric_limits<double>::epsilon()) {
+      loc = 0.0;
+    }
+    return loc;
   }
   int classify_triangle(const triangle& tri) const {
     double res_a = classify_point(tri.a());
@@ -166,7 +174,7 @@ public:
     point pt_a = tri.a();
     point pt_b = tri.b();
     point pt_c = tri.c();
-    cut_tri result;
+    cut_tri result = {};
 
     int side_a = classify_point(pt_a);
     int side_b = classify_point(pt_b);
@@ -177,35 +185,40 @@ public:
     point bc = pt_b + (v * (-side_b/n.dot(v)));
     v = pt_a - pt_c;
     point ca = pt_c + (v * (-side_c/n.dot(v)));
-    result.last_is_front = side_a * side_b * side_c < 0;
 
     if (side_a >= 0) {
       if (side_b >= 0) {
         result.front = {pt_a, pt_b, bc};
         result.extra = {pt_a, bc, ca};
         result.back = {bc, pt_c, ca};
+        result.last_is_front = true;
       } else if (side_c >= 0) {
         result.front = {pt_c, pt_a, ab};
         result.extra = {pt_c, ab, bc};
         result.back = {ab, pt_b, bc};
+        result.last_is_front = true;
       } else {
         result.front = {pt_a, ab, ca};
         result.extra = {pt_b, ca, ab};
         result.back = {pt_b, pt_c, ca};
+        result.last_is_front = false;
       }
     } else {
       if (side_b <= 0) {
         result.back = {pt_a, pt_b, bc};
         result.extra = {pt_a, bc, ca};
         result.front = {bc, pt_c, ca};
+        result.last_is_front = false;
       } else if (side_c <= 0) {
         result.back = {pt_c, pt_a, ab};
         result.extra = {pt_c, ab, bc};
         result.front = {ab, pt_b, bc};
+        result.last_is_front = false;
       } else {
         result.back = {pt_a, ab, ca};
         result.extra = {pt_b, ca, ab};
         result.front = {pt_b, pt_c, ca};
+        result.last_is_front = true;
       }
     }
 

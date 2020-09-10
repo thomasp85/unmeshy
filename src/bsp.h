@@ -24,12 +24,12 @@ public:
     SPAN
   };
   bsp(bool is_out = false) : is_out(is_out) {}
-  bsp(std::vector<triangle> list, bool is_out = false) :
+  bsp(std::vector<triangle>& list, bool is_out = false) :
     is_out(is_out) {
     build_tree(list);
   }
   ~bsp() {}
-  void build_tree(std::vector<triangle> list);
+  void build_tree(std::vector<triangle>& list);
   bool is_leaf() { return (front == nullptr && back == nullptr); }
   void shine_light(const point& light, double intensity = 1);
   void look_from(const point& pos);
