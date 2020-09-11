@@ -23,3 +23,5 @@ Imports:
     cpp11,
     tibble,
     vctrs
+Suggests: 
+    covr

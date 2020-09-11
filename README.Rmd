@@ -16,6 +16,8 @@ knitr::opts_chunk$set(
 # unmeshy
 
 <!-- badges: start -->
+[![Codecov test coverage](https://codecov.io/gh/thomasp85/unmeshy/branch/master/graph/badge.svg)](https://codecov.io/gh/thomasp85/unmeshy?branch=master)
+[![R build status](https://github.com/thomasp85/unmeshy/workflows/R-CMD-check/badge.svg)](https://github.com/thomasp85/unmeshy/actions)
 <!-- badges: end -->
 
 **WIP**
