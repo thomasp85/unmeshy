@@ -21,4 +21,5 @@ LinkingTo:
 SystemRequirements: C++11
 Imports: 
     cpp11,
-    tibble
+    tibble,
+    vctrs

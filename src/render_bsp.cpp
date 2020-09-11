@@ -7,25 +7,34 @@
 #include <cpp11/logicals.hpp>
 #include <cpp11/integers.hpp>
 #include <cpp11/data_frame.hpp>
+#include <cpp11/matrix.hpp>
 #include <cpp11/list.hpp>
 #include <cpp11/named_arg.hpp>
 
 using namespace cpp11::literals;
 
 [[cpp11::register]]
-cpp11::writable::data_frame shade_mesh_c(
-    cpp11::doubles vert, cpp11::integers tri,
+cpp11::writable::data_frame illuminate_mesh_c(
+    cpp11::doubles_matrix vert, cpp11::integers_matrix tri,
+    cpp11::doubles luminance,
     cpp11::doubles xl, cpp11::doubles yl, cpp11::doubles zl,
     cpp11::doubles intensity) {
   std::vector<triangle> triangles;
 
-  for (int i = 0; i < tri.size() / 3; ++i) {
-    triangles.push_back({
-      point(vert[tri[i]], vert[tri[i]+1], vert[tri[i]+2]),
-      point(vert[tri[i+1]], vert[tri[i+1]+1], vert[tri[i+1]+2]),
-      point(vert[tri[i+2]], vert[tri[i+2]+1], vert[tri[i+2]+2]),
-      i
+  for (int i = 0; i < tri.ncol(); ++i) {
+    int f_p = tri(0, i) - 1;
+    int s_p = tri(1, i) - 1;
+    int t_p = tri(2, i) - 1;
+    triangle t({
+      point(vert(0, f_p), vert(1, f_p), vert(2, f_p)),
+      point(vert(0, s_p), vert(1, s_p), vert(2, s_p)),
+      point(vert(0, t_p), vert(1, t_p), vert(2, t_p)),
+      i + 1,
+      luminance[i]
     });
+    if (t.is_valid()) {
+      triangles.push_back(t);
+    }
   }
 
   std::shuffle(triangles.begin(), triangles.end(), std::default_random_engine(1));
@@ -36,7 +45,7 @@ cpp11::writable::data_frame shade_mesh_c(
   }
 
   triangles.clear();
-  tree.near_to_far(point(tri[0], tri[1], tri[2]), triangles);
+  tree.near_to_far(point(tri(0, 0), tri(1, 0), tri(2, 0)), triangles);
 
   int full_length = triangles.size() * 3;
   cpp11::writable::doubles x_new;
@@ -72,32 +81,38 @@ cpp11::writable::data_frame shade_mesh_c(
     "y"_nm = y_new,
     "z"_nm = z_new,
     "id"_nm = id,
-    "light"_nm = light
+    "luminance"_nm = light
   });
 }
 
 [[cpp11::register]]
 cpp11::writable::data_frame occlude_mesh_c(
-    cpp11::doubles vert, cpp11::integers tri,
+    cpp11::doubles_matrix vert, cpp11::integers_matrix tri,
     double xv, double yv, double zv) {
   std::vector<triangle> triangles;
 
-  for (int i = 0; i < tri.size() / 3; ++i) {
-    triangles.push_back({
-      point(vert[tri[i]], vert[tri[i]+1], vert[tri[i]+2]),
-      point(vert[tri[i+1]], vert[tri[i+1]+1], vert[tri[i+1]+2]),
-      point(vert[tri[i+2]], vert[tri[i+2]+1], vert[tri[i+2]+2]),
-      i
+  for (int i = 0; i < tri.ncol(); ++i) {
+    int f_p = tri(0, i) - 1;
+    int s_p = tri(1, i) - 1;
+    int t_p = tri(2, i) - 1;
+    triangle t({
+      point(vert(0, f_p), vert(1, f_p), vert(2, f_p)),
+      point(vert(0, s_p), vert(1, s_p), vert(2, s_p)),
+      point(vert(0, t_p), vert(1, t_p), vert(2, t_p)),
+      i + 1
     });
+    if (t.is_valid()) {
+      triangles.push_back(t);
+    }
   }
 
   std::shuffle(triangles.begin(), triangles.end(), std::default_random_engine(1));
 
   bsp tree(triangles);
-  //tree.look_from(point(xv, yv, zv));
-//
-  //triangles.clear();
-  //tree.near_to_far(point(xv, yv, zv), triangles);
+  tree.look_from(point(xv, yv, zv));
+
+  triangles.clear();
+  tree.near_to_far(point(xv, yv, zv), triangles);
 
   int full_length = triangles.size() * 3;
   cpp11::writable::doubles x_new;

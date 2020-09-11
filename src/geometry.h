@@ -2,7 +2,6 @@
 
 #include <math.h>
 #include <cmath>
-#include <limits>
 #include <vector>
 
 struct vec3 {
@@ -73,20 +72,21 @@ private:
   vec3 _n;
   int _id = 0;
   double _light = 0;
-  bool _visible = false;
+  bool _visible = true;
   bool _back = false;
 
 public:
 
   triangle() {}
-  triangle(const point& a, const point& b, const point& c, int id = 0, int light = 0, bool visible = true) :
+  triangle(const point& a, const point& b, const point& c, int id = 0, double light = 0, bool visible = true, bool back = false) :
     _a(a),
     _b(b),
     _c(c),
     _n(((b - a).cross(c - b)).normalize()),
     _id(id),
     _light(light),
-    _visible(visible) {}
+    _visible(visible),
+    _back(back) {}
 
   triangle(const triangle& t2) :
     _a(t2._a),
@@ -128,6 +128,7 @@ public:
   bool is_back_facing() const { return _back; }
   void set_visibility(bool visible = true) { _visible = visible; }
   void set_back_facing(bool back = true) { _back = back; }
+  bool is_valid() const { return !std::isnan(_n.x); }
 };
 
 struct cut_tri {
@@ -136,6 +137,7 @@ struct cut_tri {
   triangle extra;
 
   bool last_is_front;
+  bool last_is_valid;
 };
 
 class plane {
@@ -149,9 +151,10 @@ public:
   plane(const triangle& tri) : n(tri.normal()), d(-tri.a().dot(n)) {}
 
   double classify_point(const point& p) const {
+    const double EPSILON = 1e-5;
     double loc = n.x * p.x + n.y * p.y + n.z * p.z + d;
-    if (loc <  std::numeric_limits<double>::epsilon() &&
-        loc > -std::numeric_limits<double>::epsilon()) {
+
+    if (loc <  EPSILON && loc > -EPSILON) {
       loc = 0.0;
     }
     return loc;
@@ -174,11 +177,18 @@ public:
     point pt_a = tri.a();
     point pt_b = tri.b();
     point pt_c = tri.c();
+    int id = tri.id();
+    double light = tri.light();
+    bool visible = tri.is_visible();
+    bool back = tri.is_back_facing();
     cut_tri result = {};
+    result.last_is_valid = true;
 
-    int side_a = classify_point(pt_a);
-    int side_b = classify_point(pt_b);
-    int side_c = classify_point(pt_c);
+    double side_a = classify_point(pt_a);
+    double side_b = classify_point(pt_b);
+    double side_c = classify_point(pt_c);
+    result.last_is_valid = side_a != 0.0 && side_b != 0.0 && side_c != 0.0;
+
     vec3 v = pt_b - pt_a;
     point ab = pt_a + (v * (-side_a/n.dot(v)));
     v = pt_c - pt_b;
@@ -186,38 +196,62 @@ public:
     v = pt_a - pt_c;
     point ca = pt_c + (v * (-side_c/n.dot(v)));
 
-    if (side_a >= 0) {
-      if (side_b >= 0) {
-        result.front = {pt_a, pt_b, bc};
-        result.extra = {pt_a, bc, ca};
-        result.back = {bc, pt_c, ca};
+    if (side_a == 0.0) {
+      if (side_b > 0.0) {
+        result.front = {pt_a, pt_b, bc, id, light, visible, back};
+        result.back = {bc, pt_c, pt_a, id, light, visible, back};
+      } else {
+        result.back = {pt_a, pt_b, bc, id, light, visible, back};
+        result.front = {bc, pt_c, pt_a, id, light, visible, back};
+      }
+    } else if (side_b == 0.0) {
+      if (side_c > 0.0) {
+        result.front = {pt_b, pt_c, ca, id, light, visible, back};
+        result.back = {ca, pt_a, pt_b, id, light, visible, back};
+      } else {
+        result.back = {pt_b, pt_c, ca, id, light, visible, back};
+        result.front = {ca, pt_a, pt_b, id, light, visible, back};
+      }
+    } else if (side_c == 0.0) {
+      if (side_a > 0.0) {
+        result.front = {pt_c, pt_a, ab, id, light, visible, back};
+        result.back = {ab, pt_b, pt_c, id, light, visible, back};
+      } else {
+        result.back = {pt_c, pt_a, ab, id, light, visible, back};
+        result.front = {ab, pt_b, pt_c, id, light, visible, back};
+      }
+    } else if (side_a > 0.0) {
+      if (side_b > 0.0) {
+        result.front = {pt_a, pt_b, bc, id, light, visible, back};
+        result.extra = {pt_a, bc, ca, id, light, visible, back};
+        result.back = {bc, pt_c, ca, id, light, visible, back};
         result.last_is_front = true;
-      } else if (side_c >= 0) {
-        result.front = {pt_c, pt_a, ab};
-        result.extra = {pt_c, ab, bc};
-        result.back = {ab, pt_b, bc};
+      } else if (side_c > 0.0) {
+        result.front = {pt_c, pt_a, ab, id, light, visible, back};
+        result.extra = {pt_c, ab, bc, id, light, visible, back};
+        result.back = {ab, pt_b, bc, id, light, visible, back};
         result.last_is_front = true;
       } else {
-        result.front = {pt_a, ab, ca};
-        result.extra = {pt_b, ca, ab};
-        result.back = {pt_b, pt_c, ca};
+        result.front = {pt_a, ab, ca, id, light, visible, back};
+        result.extra = {pt_b, ca, ab, id, light, visible, back};
+        result.back = {pt_b, pt_c, ca, id, light, visible, back};
         result.last_is_front = false;
       }
     } else {
-      if (side_b <= 0) {
-        result.back = {pt_a, pt_b, bc};
-        result.extra = {pt_a, bc, ca};
-        result.front = {bc, pt_c, ca};
+      if (side_b < 0.0) {
+        result.back = {pt_a, pt_b, bc, id, light, visible, back};
+        result.extra = {pt_a, bc, ca, id, light, visible, back};
+        result.front = {bc, pt_c, ca, id, light, visible, back};
         result.last_is_front = false;
-      } else if (side_c <= 0) {
-        result.back = {pt_c, pt_a, ab};
-        result.extra = {pt_c, ab, bc};
-        result.front = {ab, pt_b, bc};
+      } else if (side_c < 0.0) {
+        result.back = {pt_c, pt_a, ab, id, light, visible, back};
+        result.extra = {pt_c, ab, bc, id, light, visible, back};
+        result.front = {ab, pt_b, bc, id, light, visible, back};
         result.last_is_front = false;
       } else {
-        result.back = {pt_a, ab, ca};
-        result.extra = {pt_b, ca, ab};
-        result.front = {pt_b, pt_c, ca};
+        result.back = {pt_a, ab, ca, id, light, visible, back};
+        result.extra = {pt_b, ca, ab, id, light, visible, back};
+        result.front = {pt_b, pt_c, ca, id, light, visible, back};
         result.last_is_front = true;
       }
     }

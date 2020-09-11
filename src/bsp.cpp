@@ -27,11 +27,13 @@ void bsp::build_tree(std::vector<triangle>& list) {
       cut_tri split = partition.split_triangle(tri);
       front_list.push_back(triangle(split.front));
       back_list.push_back(triangle(split.back));
-      //if (split.last_is_front) {
-      //  front_list.push_back(triangle(split.extra));
-      //} else {
-      //  back_list.push_back(triangle(split.extra));
-      //}
+      if (split.last_is_valid) {
+        if (split.last_is_front) {
+          front_list.push_back(triangle(split.extra));
+        } else {
+          back_list.push_back(triangle(split.extra));
+        }
+      }
       break;
     }
     default:
@@ -67,10 +69,12 @@ void bsp::add_triangle(const triangle& tri) {
       cut_tri split = partition.split_triangle(tri);
       front->add_triangle(split.front);
       back->add_triangle(split.back);
-      if (split.last_is_front) {
-        front->add_triangle(split.extra);
-      } else {
-        back->add_triangle(split.extra);
+      if (split.last_is_valid) {
+        if (split.last_is_front) {
+          front->add_triangle(split.extra);
+        } else {
+          back->add_triangle(split.extra);
+        }
       }
       break;
     }
@@ -113,10 +117,12 @@ void bsp::add_shadow(const point& light, triangle& tri,
       cut_tri split = partition.split_triangle(tri);
       front->add_shadow(light, split.front, new_triangles, view, intensity);
       back->add_shadow(light, split.back, new_triangles, view, intensity);
-      if (split.last_is_front) {
-        front->add_shadow(light, split.extra, new_triangles, view, intensity);
-      } else {
-        back->add_shadow(light, split.extra, new_triangles, view, intensity);
+      if (split.last_is_valid) {
+        if (split.last_is_front) {
+          front->add_shadow(light, split.extra, new_triangles, view, intensity);
+        } else {
+          back->add_shadow(light, split.extra, new_triangles, view, intensity);
+        }
       }
       break;
     }

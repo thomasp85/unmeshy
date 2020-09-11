@@ -5,17 +5,17 @@
 #include "cpp11/declarations.hpp"
 
 // render_bsp.cpp
-cpp11::writable::data_frame shade_mesh_c(cpp11::doubles vert, cpp11::integers tri, cpp11::doubles xl, cpp11::doubles yl, cpp11::doubles zl, cpp11::doubles intensity);
-extern "C" SEXP _unmeshy_shade_mesh_c(SEXP vert, SEXP tri, SEXP xl, SEXP yl, SEXP zl, SEXP intensity) {
+cpp11::writable::data_frame illuminate_mesh_c(cpp11::doubles_matrix vert, cpp11::integers_matrix tri, cpp11::doubles luminance, cpp11::doubles xl, cpp11::doubles yl, cpp11::doubles zl, cpp11::doubles intensity);
+extern "C" SEXP _unmeshy_illuminate_mesh_c(SEXP vert, SEXP tri, SEXP luminance, SEXP xl, SEXP yl, SEXP zl, SEXP intensity) {
   BEGIN_CPP11
-    return cpp11::as_sexp(shade_mesh_c(cpp11::as_cpp<cpp11::decay_t<cpp11::doubles>>(vert), cpp11::as_cpp<cpp11::decay_t<cpp11::integers>>(tri), cpp11::as_cpp<cpp11::decay_t<cpp11::doubles>>(xl), cpp11::as_cpp<cpp11::decay_t<cpp11::doubles>>(yl), cpp11::as_cpp<cpp11::decay_t<cpp11::doubles>>(zl), cpp11::as_cpp<cpp11::decay_t<cpp11::doubles>>(intensity)));
+    return cpp11::as_sexp(illuminate_mesh_c(cpp11::as_cpp<cpp11::decay_t<cpp11::doubles_matrix>>(vert), cpp11::as_cpp<cpp11::decay_t<cpp11::integers_matrix>>(tri), cpp11::as_cpp<cpp11::decay_t<cpp11::doubles>>(luminance), cpp11::as_cpp<cpp11::decay_t<cpp11::doubles>>(xl), cpp11::as_cpp<cpp11::decay_t<cpp11::doubles>>(yl), cpp11::as_cpp<cpp11::decay_t<cpp11::doubles>>(zl), cpp11::as_cpp<cpp11::decay_t<cpp11::doubles>>(intensity)));
   END_CPP11
 }
 // render_bsp.cpp
-cpp11::writable::data_frame occlude_mesh_c(cpp11::doubles vert, cpp11::integers tri, double xv, double yv, double zv);
+cpp11::writable::data_frame occlude_mesh_c(cpp11::doubles_matrix vert, cpp11::integers_matrix tri, double xv, double yv, double zv);
 extern "C" SEXP _unmeshy_occlude_mesh_c(SEXP vert, SEXP tri, SEXP xv, SEXP yv, SEXP zv) {
   BEGIN_CPP11
-    return cpp11::as_sexp(occlude_mesh_c(cpp11::as_cpp<cpp11::decay_t<cpp11::doubles>>(vert), cpp11::as_cpp<cpp11::decay_t<cpp11::integers>>(tri), cpp11::as_cpp<cpp11::decay_t<double>>(xv), cpp11::as_cpp<cpp11::decay_t<double>>(yv), cpp11::as_cpp<cpp11::decay_t<double>>(zv)));
+    return cpp11::as_sexp(occlude_mesh_c(cpp11::as_cpp<cpp11::decay_t<cpp11::doubles_matrix>>(vert), cpp11::as_cpp<cpp11::decay_t<cpp11::integers_matrix>>(tri), cpp11::as_cpp<cpp11::decay_t<double>>(xv), cpp11::as_cpp<cpp11::decay_t<double>>(yv), cpp11::as_cpp<cpp11::decay_t<double>>(zv)));
   END_CPP11
 }
 // render_bsp.cpp
@@ -35,16 +35,16 @@ extern "C" SEXP _unmeshy_join_triangles(SEXP x, SEXP y, SEXP z) {
 
 extern "C" {
 /* .Call calls */
+extern SEXP _unmeshy_illuminate_mesh_c(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 extern SEXP _unmeshy_join_triangles(SEXP, SEXP, SEXP);
 extern SEXP _unmeshy_occlude_mesh_c(SEXP, SEXP, SEXP, SEXP, SEXP);
 extern SEXP _unmeshy_project_coords_c(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
-extern SEXP _unmeshy_shade_mesh_c(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_unmeshy_join_triangles",   (DL_FUNC) &_unmeshy_join_triangles,   3},
-    {"_unmeshy_occlude_mesh_c",   (DL_FUNC) &_unmeshy_occlude_mesh_c,   5},
-    {"_unmeshy_project_coords_c", (DL_FUNC) &_unmeshy_project_coords_c, 9},
-    {"_unmeshy_shade_mesh_c",     (DL_FUNC) &_unmeshy_shade_mesh_c,     6},
+    {"_unmeshy_illuminate_mesh_c", (DL_FUNC) &_unmeshy_illuminate_mesh_c, 7},
+    {"_unmeshy_join_triangles",    (DL_FUNC) &_unmeshy_join_triangles,    3},
+    {"_unmeshy_occlude_mesh_c",    (DL_FUNC) &_unmeshy_occlude_mesh_c,    5},
+    {"_unmeshy_project_coords_c",  (DL_FUNC) &_unmeshy_project_coords_c,  9},
     {NULL, NULL, 0}
 };
 }
