@@ -16,7 +16,7 @@
 #' @return A new trimesh object, potentially with additional triangles if
 #' triangles have been splitted. triangle info has been
 #'
-#' @return
+#' @export
 #'
 illuminate_mesh <- function(mesh, lights, luminance = 1) {
   mesh <- as_trimesh(mesh)

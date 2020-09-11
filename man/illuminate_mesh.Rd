@@ -18,8 +18,6 @@ in \code{lights})}
 \value{
 A new trimesh object, potentially with additional triangles if
 triangles have been splitted. triangle info has been
-
-
 }
 \description{
 This functions allows you to calculate the light hitting triangles in a mesh
